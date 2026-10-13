@@ -102,7 +102,7 @@ async function buildWorld(){
  for(let x=ROAD.x0;x<ROAD.x1;x+=7){const l=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.16),M.line);l.rotation.x=-Math.PI/2;l.position.set(x,.01,6);scene.add(l);}
  // building row with two alleys (gaps at x≈-16 and x≈62)
  const B=['a','b','c','d','e','f','g','h'];let n=0;const P=[];
- const place=(x,z,rot)=>{const nm=B[n++%8];P.push(model(`assets/models/city/building-${nm}.glb`,{width:9.6}).then(m=>{m.position.set(x,.15,z);m.rotation.y=rot;m.traverse(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];o.material=ms.map(q=>{q=q.clone();q.color&&q.color.multiplyScalar(.42);q.emissive&&q.emissive.setScalar(0);return q;});if(o.material.length===1)o.material=o.material[0];}});scene.add(m);}));addSolid(x,z,10,10,30,0,true);};
+ const place=(x,z,rot)=>{const nm=B[n++%8];P.push(model(`assets/models/city/building-${nm}.glb`,{width:9.6}).then(m=>{m.position.set(x,.15,z);m.rotation.y=rot;m.traverse(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];o.material=ms.map(q=>{q=q.clone();q.color&&q.color.multiplyScalar(.2);q.emissive&&q.emissive.setScalar(0);return q;});if(o.material.length===1)o.material=o.material[0];}});scene.add(m);}));addSolid(x,z,10,10,30,0,true);};
  for(let x=-74;x<=144;x+=10){if(Math.abs(x+16)<5||Math.abs(x-62)<5)continue;place(x,19.2,Math.PI);if(x%20===0)place(x,40,Math.PI);}
  for(const ax of[-16,62]){slab(ax-4,ax+4,14,48);for(const s of[-1,1])addSolid(ax+s*7,32,4,22,30,0,true);addSolid(ax,49,10,2,30,0,true);
   const wall=new THREE.Mesh(new THREE.BoxGeometry(10,12,1),M.brick);wall.position.set(ax,6,49);scene.add(wall);
