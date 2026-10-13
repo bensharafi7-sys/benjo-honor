@@ -13,7 +13,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t,damp=(a,b
 const wrapA=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
 const angDamp=(a,b,k,dt)=>a+wrapA(b-a)*(1-Math.exp(-k*dt));
 const V3=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
-const APP=$('app');const HERO_GLB='ben_v2.glb';
+const APP=$('app');const HERO_GLB='ben_pixar.glb';
 
 // ---------- settings ----------
 const SET=Object.assign({sens:1,lefty:false,invY:false,contrast:false},JSON.parse(localStorage.getItem('benjo_ist_set')||'{}'));
@@ -25,7 +25,7 @@ $('gear').onclick=()=>$('settings').classList.toggle('hidden');$('setClose').onc
 // ---------- renderer (mobile budget: no shadows, no point lights) ----------
 const renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:!isTouch,powerPreference:'high-performance',preserveDrawingBuffer:REC});
 renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.25:1.5));
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1426);scene.fog=new THREE.FogExp2(0x101a2e,0.012);
 const camera=new THREE.PerspectiveCamera(62,9/16,0.1,600);
 function resize(){const w=APP.clientWidth,h=APP.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
@@ -332,12 +332,12 @@ function updCamera(dt){
   const pit=G.look.pitch-.05;const back=V3(Math.sin(G.look.yaw)*Math.cos(pit),-Math.sin(pit),Math.cos(G.look.yaw)*Math.cos(pit));
   const pivot=carModel.position.clone();pivot.y+=1.5;const want=pivot.clone().addScaledVector(back,8.5);want.y=Math.max(want.y,.6);
   camPos.lerp(want,1-Math.exp(-8*dt));camera.position.copy(camPos);camLook.copy(pivot).addScaledVector(back,-6);camera.lookAt(camLook);fov=lerp(64,78,clamp(Math.abs(CAR.speed)/30,0,1));}
- else{const aiming=G.aim,dist=aiming?2.4:4.6,side=aiming?.55:.0,h=G.crouch?1.25:1.65,yaw=G.look.yaw,pit=G.look.pitch;
+ else{const aiming=G.aim,dist=aiming?2.4:5.2,side=aiming?.55:.0,h=G.crouch?1.25:1.65,yaw=G.look.yaw,pit=G.look.pitch;
   const back=V3(Math.sin(yaw)*Math.cos(pit),-Math.sin(pit),Math.cos(yaw)*Math.cos(pit));const right=camBasis(yaw).right;
   const pivot=P.pos.clone().setY(P.pos.y+h).addScaledVector(V3(right.x,0,right.z),side);let want=pivot.clone().addScaledVector(back,dist);
   for(const b of solids){if(b.containsPoint(want)){const p=new THREE.Ray(pivot,back).intersectBox(b,V3());if(p)want=p.addScaledVector(back,-.25);}}
   want.y=Math.max(want.y,P.pos.y+.3);
-  camPos.lerp(want,1-Math.exp(-(G.snapCam?60:16)*dt));G.snapCam=false;camera.position.copy(camPos);camLook.copy(pivot).addScaledVector(back,-10);camera.lookAt(camLook);fov=aiming?50:64;}
+  camPos.lerp(want,1-Math.exp(-(G.snapCam?60:16)*dt));G.snapCam=false;camera.position.copy(camPos);camLook.copy(pivot).addScaledVector(back,-10);camLook.y-=aiming?0:1.6;camera.lookAt(camLook);fov=aiming?50:64;}
  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake*.4;camera.position.y+=(Math.random()-.5)*shake*.4;}
  camera.fov=damp(camera.fov,fov,8,dt);camera.updateProjectionMatrix();$('cross').classList.toggle('on',G.aim&&!G.inCar&&G.state==='play');}
 
@@ -446,7 +446,7 @@ function frame(dt){
  renderer.render(scene,camera);G.fps=lerp(G.fps||60,1/Math.max(dt,1e-3),.05);}
 function loop(){const now=performance.now();const dt=Math.min(.05,(now-last)/1000);last=now;if(!REC)frame(dt);requestAnimationFrame(loop);}
 window.__step=(n=1,dt=1/30)=>{for(let i=0;i<n;i++)frame(dt);};
-window.__dbg={P,CAR,camera,THREE,get car(){return carModel},get chassis(){return chassis},get demir(){return demir},stageB,stageC,stageE,loadCheckpoint,saveCheckpoint,getCheckpoint,act,placeCar,
+window.__dbg={P,CAR,camera,THREE,get hero(){return hero},get car(){return carModel},get chassis(){return chassis},get demir(){return demir},stageB,stageC,stageE,loadCheckpoint,saveCheckpoint,getCheckpoint,act,placeCar,
  project(v){const p=V3(v.x,v.y,v.z).project(camera);return{x:(p.x+1)/2*APP.clientWidth,y:(1-p.y)/2*APP.clientHeight};}};
 
 // ---------- boot ----------

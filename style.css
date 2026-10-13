@@ -39,9 +39,9 @@ body.cine #sub{bottom:12%}
 #stick{position:absolute;left:6%;bottom:6%;width:140px;height:140px;border-radius:50%;background:#ffffff14;border:2px solid #ffffff40;touch-action:none}
 .lefty #stick{left:auto;right:6%}
 #knob{position:absolute;left:50%;top:50%;width:60px;height:60px;margin:-30px;border-radius:50%;background:#ffffff55;border:2px solid #fff8}
-#btns{position:absolute;right:3%;bottom:4%;width:48%;display:flex;flex-wrap:wrap-reverse;gap:8px;justify-content:flex-start;direction:ltr}
+#btns{position:absolute;right:3%;bottom:3%;width:44%;display:flex;flex-wrap:wrap-reverse;gap:8px;justify-content:flex-start;direction:ltr}
 .lefty #btns{right:auto;left:3%}
-#btns button,#enter{width:64px;height:64px;border-radius:50%;border:2px solid #ffffff66;background:#0009;color:#fff;font:inherit;font-size:13px;touch-action:none;padding:0}
+#btns button,#enter{width:58px;height:58px;border-radius:50%;border:2px solid #ffffff66;background:#0009;color:#fff;font:inherit;font-size:13px;touch-action:none;padding:0}
 #btns button.on,#btns button.down{background:#f3c25b;color:#000}
 body:not(.incar) #btns .car{display:none}body.incar #btns .foot{display:none}
 #enter{position:absolute;right:6%;bottom:30%;width:96px;height:56px;border-radius:12px;background:#f3c25bdd;color:#000;font-weight:700;font-size:17px}
