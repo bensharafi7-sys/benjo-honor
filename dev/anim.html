@@ -1,0 +1,17 @@
+<!doctype html><html><body style="margin:0"><canvas id="c" width="1600" height="800"></canvas>
+<script type="importmap">{"imports":{"three":"../lib/three.module.js","three/addons/":"../lib/addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {makeRetargeter} from '../retarget.js';
+const r=new THREE.WebGLRenderer({canvas:c,antialias:true,preserveDrawingBuffer:true});
+const s=new THREE.Scene();s.background=new THREE.Color(0x404248);s.add(new THREE.HemisphereLight(0xffffff,0x444444,2));const d=new THREE.DirectionalLight(0xffffff,2);d.position.set(2,4,5);s.add(d);
+const L=new GLTFLoader();const [b,a]=await Promise.all([L.loadAsync('../assets/models/ben_v2.glb'),L.loadAsync('../assets/models/anims.glb')]);
+const bake=makeRetargeter(b.scene,a.scene);const clips=(new URLSearchParams(location.search).get('c')||'Idle_Loop,Walk_Loop,Jog_Fwd_Loop,Pistol_Idle_Loop').split(',');
+const t0=performance.now();
+clips.forEach((cn,i)=>{const src=a.animations.find(x=>x.name===cn);const clip=bake(src);const m=i==0?b.scene:(()=>{const SU=null;return null})();});
+window.bakeMs=performance.now()-t0;
+// show: ben with each clip at t=0.3*duration side by side by cloning via SkeletonUtils
+const {clone}=await import('three/addons/utils/SkeletonUtils.js');
+clips.forEach((cn,i)=>{const src=a.animations.find(x=>x.name===cn);const m=clone(b.scene);m.position.x=(i-1.5)*1.1;s.add(m);const mx=new THREE.AnimationMixer(m);const ac=mx.clipAction(bake(src));ac.play();mx.setTime(src.duration*.3);
+ const g=clone(a.scene);g.scale.setScalar(.5);g.position.set((i-1.5)*1.1+.35,0,-1);s.add(g);const mg=new THREE.AnimationMixer(g);mg.clipAction(src).play();mg.setTime(src.duration*.3);});
+const cam=new THREE.PerspectiveCamera(35,2,.1,50);cam.position.set(0,1.1,5.2);cam.lookAt(0,.85,0);r.render(s,cam);window.done=true;
+</script></body></html>

@@ -1,0 +1,42 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>BENJO IN ISTANBUL – השתלטות על מאפיית היתומים</title><meta name="theme-color" content="#060912"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/","cannon-es":"./lib/cannon-es.js"}}</script>
+</head><body>
+<div id="app">
+<canvas id="c"></canvas>
+<div id="bars"><div class="bar top"></div><div class="bar bot"></div></div>
+<div id="hud" class="hidden">
+ <div id="obj"><span id="objT"></span><span id="objD"></span></div>
+ <canvas id="map" width="220" height="220"></canvas>
+ <div id="hp"><i></i></div><div id="wpn"></div>
+ <div id="arrow">▲</div><div id="cross">+</div><div id="hint"></div><div id="speed"></div><div id="cp"></div>
+ <button id="gear" aria-label="הגדרות">⚙</button>
+</div>
+<div id="sub" dir="rtl"></div>
+<div id="phone" class="hidden"><b>📱</b><span></span></div>
+<div id="touch" class="hidden">
+ <div id="lookzone"></div>
+ <div id="stick"><div id="knob"></div></div>
+ <div id="btns">
+  <button data-k="run" class="foot">ריצה</button><button data-k="punch" class="foot">אגרוף</button><button data-k="gun" class="foot">אקדח</button>
+  <button data-k="jump" class="foot">קפיצה</button><button data-k="crouch" class="foot">כריעה</button>
+  <button data-k="gas" class="car">גז</button><button data-k="brake" class="car">בלם</button><button data-k="exit" class="car">יציאה</button>
+ </div>
+ <button id="enter" data-k="enter" class="hidden">🚗 כניסה</button>
+</div>
+<div id="settings" class="hidden"><h3>הגדרות שליטה</h3>
+ <label>רגישות מצלמה <input id="sens" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
+ <label><input id="lefty" type="checkbox"> מצב שמאלי (ג'ויסטיק בימין)</label>
+ <label><input id="invY" type="checkbox"> היפוך ציר אנכי (לא מומלץ)</label>
+ <label><input id="contrast" type="checkbox"> ניגודיות גבוהה</label>
+ <button id="setClose">סגור</button></div>
+<div id="title"><div class="logo">BENJO<small>IN ISTANBUL</small></div><h2>השתלטות על מאפיית היתומים</h2><p>משימה 01 · השיחה מקרקוי</p>
+ <button id="start" disabled>התחל</button><button id="cont" class="hidden">המשך מצ'קפוינט</button><div id="load">טוען...</div>
+ <div class="keys">מגע: ג'ויסטיק משמאל · גרירה מימין = מצלמה · מקלדת: WASD · Shift ריצה · עכבר מבט · F אגרוף · E רכב</div></div>
+<div id="fade"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body></html>

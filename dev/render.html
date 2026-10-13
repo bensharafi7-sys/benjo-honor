@@ -1,0 +1,15 @@
+<!doctype html><html><body style="margin:0;background:#111"><canvas id="c" width="2400" height="1000"></canvas>
+<script type="importmap">{"imports":{"three":"../lib/three.module.js","three/addons/":"../lib/addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const r=new THREE.WebGLRenderer({canvas:c,antialias:true,preserveDrawingBuffer:true});r.toneMapping=THREE.ACESFilmicToneMapping;r.setSize(2400,1000,false);r.setScissorTest(true);
+const s=new THREE.Scene();s.background=new THREE.Color(0x3a3c42);
+s.add(new THREE.HemisphereLight(0xdde4ff,0x332a22,1.3));const k=new THREE.DirectionalLight(0xffffff,2.2);k.position.set(2,4,4);s.add(k);const rim=new THREE.DirectionalLight(0xffffff,.8);rim.position.set(-3,3,-3);const fill=new THREE.DirectionalLight(0xffffff,1.0);fill.position.set(-3,2,3);s.add(fill);s.add(rim);
+const g=await new GLTFLoader().loadAsync('../assets/models/'+(new URLSearchParams(location.search).get('m')||'ben.glb'));const m=g.scene;s.add(m);m.traverse(o=>{if(o.isMesh){const ms=[].concat(o.material);for(const mt of ms){mt.roughness=Math.max(mt.roughness??1,.75);if(mt.roughnessMap)mt.roughness=1;mt.metalness=0;mt.metalnessMap=null;mt.needsUpdate=true;}}});
+const bb=new THREE.Box3().setFromObject(m),h=bb.max.y-bb.min.y;window.H=JSON.stringify([bb.min,bb.max]);
+const fl=new THREE.Mesh(new THREE.CircleGeometry(1.4,48),new THREE.MeshStandardMaterial({color:0x55575e}));fl.rotation.x=-Math.PI/2;fl.position.y=bb.min.y;s.add(fl);
+const cam=new THREE.PerspectiveCamera(30,800/1000,.1,50);
+for(const[i,a]of[0,Math.PI/4.5].entries()){const x=i*800;r.setViewport(x,0,800,1000);r.setScissor(x,0,800,1000);const d=h*2.1;cam.position.set(Math.sin(a)*d,bb.min.y+h*.55,Math.cos(a)*d);cam.lookAt(0,bb.min.y+h*.5,0);r.render(s,cam);}
+{const x=1600;r.setViewport(x,0,800,1000);r.setScissor(x,0,800,1000);const hy=bb.min.y+h*.9;const c2=new THREE.PerspectiveCamera(25,.8,.05,20);c2.position.set(.35,hy,.9);c2.lookAt(0,hy-.02,0);r.render(s,c2);}
+window.done=true;
+</script></body></html>
