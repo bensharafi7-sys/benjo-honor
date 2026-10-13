@@ -25,17 +25,18 @@ $('gear').onclick=()=>$('settings').classList.toggle('hidden');$('setClose').onc
 // ---------- renderer (mobile budget: no shadows, no point lights) ----------
 const renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:!isTouch,powerPreference:'high-performance',preserveDrawingBuffer:REC});
 renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.25:1.5));
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a1426);scene.fog=new THREE.FogExp2(0x101a2e,0.012);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.75;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x1a2a48);scene.fog=new THREE.FogExp2(0x22324e,0.009);
 const camera=new THREE.PerspectiveCamera(62,9/16,0.1,600);
 function resize(){const w=APP.clientWidth,h=APP.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 {const pm=new THREE.PMREMGenerator(renderer);const es=new THREE.Scene();es.background=new THREE.Color(0x0b1424);
  const cols=[0xffb860,0xffd28a,0x3b6bd6,0xff7040,0xffe2b0];for(let i=0;i<16;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(3,1+Math.random()*3,.2),new THREE.MeshBasicMaterial({color:cols[i%5]}));const a=i/16*Math.PI*2;m.position.set(Math.cos(a)*20,1+Math.random()*5,Math.sin(a)*20);m.lookAt(0,3,0);es.add(m);}
  scene.environment=pm.fromScene(es,0.04).texture;scene.environmentIntensity=0.45;}
-scene.add(new THREE.HemisphereLight(0x5a6a98,0x2a1a10,1.0));
-const key=new THREE.DirectionalLight(0xffc58a,1.1);key.position.set(-30,40,30);scene.add(key);   // warm street-light key (single light, no shadows)
-const rim=new THREE.DirectionalLight(0x6f9cff,0.6);rim.position.set(20,25,-40);scene.add(rim);
+scene.add(new THREE.HemisphereLight(0x6a80b8,0x5a3e22,1.45));
+const key=new THREE.DirectionalLight(0xffb070,1.3);key.position.set(-30,40,30);scene.add(key);   // warm street-light key (single light, no shadows)
+const rim=new THREE.DirectionalLight(0x8fb4ff,0.9);rim.position.set(20,25,-40);scene.add(rim);
+const camFill=new THREE.DirectionalLight(0xfff0dd,0.9);scene.add(camFill,camFill.target);
 
 // ---------- physics ----------
 const world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.82,0)});world.broadphase=new CANNON.SAPBroadphase(world);
@@ -58,8 +59,8 @@ let actx;function buzz(){try{navigator.vibrate?.([200,100,200,100,200]);}catch{}
  for(let i=0;i<3;i++){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=150;o.type='square';g.gain.value=0;g.gain.setValueAtTime(.12,t+i*.3);g.gain.setValueAtTime(0,t+i*.3+.2);o.connect(g).connect(actx.destination);o.start(t+i*.3);o.stop(t+i*.3+.22);}}
 
 // ---------- materials ----------
-const M={asphalt:new THREE.MeshStandardMaterial({color:0x1a1d24,roughness:.22,metalness:.4}),
- walk:new THREE.MeshStandardMaterial({color:0x3a3a40,roughness:.4,metalness:.2}),stone:new THREE.MeshStandardMaterial({color:0x4a4640,roughness:.55}),
+const M={asphalt:new THREE.MeshStandardMaterial({color:0x2c3038,roughness:.3,metalness:.3}),
+ walk:new THREE.MeshStandardMaterial({color:0x5a5a62,roughness:.4,metalness:.2}),stone:new THREE.MeshStandardMaterial({color:0x6e665a,roughness:.55}),
  water:new THREE.MeshStandardMaterial({color:0x061224,roughness:.06,metalness:.95}),wood:new THREE.MeshStandardMaterial({color:0x4a3524,roughness:.7}),
  line:new THREE.MeshBasicMaterial({color:0x8d8a78}),dark:new THREE.MeshStandardMaterial({color:0x14161c,roughness:.8}),
  warm:new THREE.MeshBasicMaterial({color:0xffc070,toneMapped:false}),cool:new THREE.MeshBasicMaterial({color:0x9cc4ff,toneMapped:false}),
@@ -69,7 +70,7 @@ function glowTex(){const c=document.createElement('canvas');c.width=c.height=128
 const GLOW=glowTex();
 function fakeLight(pos,color=0xffb060,size=3,pool=7){ // lamp = sprite halo + additive ground pool, zero real lights
  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.9,fog:true}));s.scale.setScalar(size);s.position.copy(pos);scene.add(s);
- if(pool){const p=new THREE.Mesh(new THREE.PlaneGeometry(pool,pool),new THREE.MeshBasicMaterial({map:GLOW,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.35,toneMapped:false}));p.rotation.x=-Math.PI/2;p.position.set(pos.x,.17,pos.z);scene.add(p);}}
+ if(pool){const p=new THREE.Mesh(new THREE.PlaneGeometry(pool,pool),new THREE.MeshBasicMaterial({map:GLOW,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,opacity:.55,toneMapped:false}));p.rotation.x=-Math.PI/2;p.position.set(pos.x,.17,pos.z);scene.add(p);}}
 function sign(text,color,w,h,pos,rotY){const cv=document.createElement('canvas');cv.width=512;cv.height=Math.round(512*h/w);const c=cv.getContext('2d');
  c.fillStyle='#0a0a10';c.fillRect(0,0,cv.width,cv.height);c.font=`700 ${cv.height*.55}px Arial`;c.textAlign='center';c.textBaseline='middle';c.direction=/[\u0590-\u05ff]/.test(text)?'rtl':'ltr';
  c.shadowColor=color;c.shadowBlur=22;c.fillStyle=color;c.fillText(text,256,cv.height/2);c.shadowBlur=0;c.globalAlpha=.6;c.fillStyle='#fff';c.fillText(text,256,cv.height/2);
@@ -114,10 +115,11 @@ async function buildWorld(){
   // café tables
   const t=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.75,8),M.metal);t.position.set(x+1.5,.5,12.4);scene.add(t);}
  // street lamps (fake light only)
- for(let x=ROAD.x0+6;x<ROAD.x1;x+=16){P.push(model('assets/models/roads/light-curved.glb',{height:6.5}).then(m=>{m.position.set(x,.15,1.4);m.rotation.y=Math.PI/2*0;scene.add(m);}));fakeLight(V3(x,6.2,2.6),0xffb35a,3.4,8);}
+ for(let x=ROAD.x0+6;x<ROAD.x1;x+=16){P.push(model('assets/models/roads/light-curved.glb',{height:6.5}).then(m=>{m.position.set(x,.15,1.4);m.rotation.y=Math.PI/2*0;scene.add(m);}));fakeLight(V3(x,6.2,2.6),0xffb35a,4.2,14);fakeLight(V3(x,6.2,2.6),0xff9a40,9,0);}
  // signs: Karaköy + Hebrew
  sign('KARAKÖY','#f3c25b',8,1.6,V3(-40,6,14.1),Math.PI);sign('בית קפה','#ff8a3c',4.5,1.2,V3(-4,4.4,14.1),Math.PI);sign('LOKANTA','#56c8ff',5,1.2,V3(24,4.6,14.1),Math.PI);
  sign('BALIK','#ff4d6d',4,1.1,V3(90,4.4,14.1),Math.PI);sign('רציף','#9cc4ff',3,1,V3(30,3.2,-9.6),Math.PI);sign('GALATA','#f3c25b',5,1.2,V3(120,5,14.1),Math.PI);
+ for(let x=ROAD.x0+4;x<ROAD.x1;x+=12)fakeLight(V3(x,3.2,-6),0xffc27a,2.2,10);
  // bollards along quay
  for(let x=ROAD.x0+3;x<ROAD.x1;x+=9){const b=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,.6,8),M.dark);b.position.set(x,.45,-8.8);scene.add(b);}
  // WAREHOUSE (east end, x 150..215)
@@ -442,6 +444,7 @@ function frame(dt){
  updDemir(dt);for(const e of extras)e.update(dt);
  if(ferry)ferry.position.x=((G.time*3)%400)-150;
  updCamera(dt);updRain(dt);updAudio(dt);updMission(dt);
+ camFill.position.copy(camera.position).add(V3(0,2,0));camFill.target.position.copy(G.inCar?carModel.position:P.pos);
  if((mapT+=dt)>.1){mapT=0;drawMap();}
  renderer.render(scene,camera);G.fps=lerp(G.fps||60,1/Math.max(dt,1e-3),.05);}
 function loop(){const now=performance.now();const dt=Math.min(.05,(now-last)/1000);last=now;if(!REC)frame(dt);requestAnimationFrame(loop);}
