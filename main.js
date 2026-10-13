@@ -65,7 +65,7 @@ const M={asphalt:new THREE.MeshStandardMaterial({color:0x2c3038,roughness:.3,met
  line:new THREE.MeshBasicMaterial({color:0x8d8a78}),dark:new THREE.MeshStandardMaterial({color:0x14161c,roughness:.8}),
  warm:new THREE.MeshBasicMaterial({color:0xffc070,toneMapped:false}),cool:new THREE.MeshBasicMaterial({color:0x9cc4ff,toneMapped:false}),
  rail:new THREE.MeshStandardMaterial({color:0x22252c,roughness:.4,metalness:.7}),brick:new THREE.MeshStandardMaterial({color:0x5a3a2e,roughness:.8}),
- metal:new THREE.MeshStandardMaterial({color:0x3c4450,roughness:.5,metalness:.6})};
+ metal:new THREE.MeshStandardMaterial({color:0x161a20,roughness:.5,metalness:.6})};
 function glowTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.45)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);return t;}
 const GLOW=glowTex();
 function fakeLight(pos,color=0xffb060,size=3,pool=7){ // lamp = sprite halo + additive ground pool, zero real lights
@@ -102,7 +102,7 @@ async function buildWorld(){
  for(let x=ROAD.x0;x<ROAD.x1;x+=7){const l=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.16),M.line);l.rotation.x=-Math.PI/2;l.position.set(x,.01,6);scene.add(l);}
  // building row with two alleys (gaps at x≈-16 and x≈62)
  const B=['a','b','c','d','e','f','g','h'];let n=0;const P=[];
- const place=(x,z,rot)=>{const nm=B[n++%8];P.push(model(`assets/models/city/building-${nm}.glb`,{width:9.6}).then(m=>{m.position.set(x,.15,z);m.rotation.y=rot;m.traverse(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];o.material=ms.map(q=>{q=q.clone();q.color&&q.color.multiplyScalar(.2);q.emissive&&q.emissive.setScalar(0);return q;});if(o.material.length===1)o.material=o.material[0];}});scene.add(m);}));addSolid(x,z,10,10,30,0,true);};
+ const place=(x,z,rot)=>{const nm=B[n++%8];P.push(model(`assets/models/city/building-${nm}.glb`,{width:9.6}).then(m=>{m.position.set(x,.15,z);m.rotation.y=rot;m.traverse(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];o.material=ms.map(q=>{q=q.clone();q.color&&q.color.multiplyScalar(.045);q.roughness=1;q.metalness=0;q.emissive&&q.emissive.setScalar(0);return q;});if(o.material.length===1)o.material=o.material[0];}});scene.add(m);}));addSolid(x,z,10,10,30,0,true);};
  for(let x=-74;x<=144;x+=10){if(Math.abs(x+16)<5||Math.abs(x-62)<5)continue;place(x,19.2,Math.PI);if(x%20===0)place(x,40,Math.PI);}
  for(const ax of[-16,62]){slab(ax-4,ax+4,14,48);for(const s of[-1,1])addSolid(ax+s*7,32,4,22,30,0,true);addSolid(ax,49,10,2,30,0,true);
   const wall=new THREE.Mesh(new THREE.BoxGeometry(10,12,1),M.brick);wall.position.set(ax,6,49);scene.add(wall);
@@ -449,7 +449,7 @@ function frame(dt){
  renderer.render(scene,camera);G.fps=lerp(G.fps||60,1/Math.max(dt,1e-3),.05);}
 function loop(){const now=performance.now();const dt=Math.min(.05,(now-last)/1000);last=now;if(!REC)frame(dt);requestAnimationFrame(loop);}
 window.__step=(n=1,dt=1/30)=>{for(let i=0;i<n;i++)frame(dt);};
-window.__dbg={P,CAR,camera,THREE,get hero(){return hero},get car(){return carModel},get chassis(){return chassis},get demir(){return demir},stageB,stageC,stageE,loadCheckpoint,saveCheckpoint,getCheckpoint,act,placeCar,
+window.__dbg={scene,P,CAR,camera,THREE,get hero(){return hero},get car(){return carModel},get chassis(){return chassis},get demir(){return demir},stageB,stageC,stageE,loadCheckpoint,saveCheckpoint,getCheckpoint,act,placeCar,
  project(v){const p=V3(v.x,v.y,v.z).project(camera);return{x:(p.x+1)/2*APP.clientWidth,y:(1-p.y)/2*APP.clientHeight};}};
 
 // ---------- boot ----------
