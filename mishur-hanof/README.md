@@ -25,6 +25,6 @@ cd mishur-hanof && python3 -m http.server 8080
 ## מבנה
 - `index.html` – מעטפת · `styles.css` – עיצוב · `app.js` – לוגיקה, מסכים וניתוב
 - `data.js` – נתוני הדגמה (התאריכים יחסיים להיום). בגרסת ייצור מחליפים בשרת/API.
-- `sw.js`, `manifest.json`, `icon.svg` – התקנה ועבודה בלי רשת
+- `logo.png` – סמל בית הספר · `sw.js`, `manifest.json`, `icon-*.png` – התקנה ועבודה בלי רשת
 
 > גרסת הדגמה: הנתונים נשמרים ב-localStorage במכשיר. כל שינוי עובר דרך `save()` ב-`app.js`, כך שאפשר לחבר שרת אמיתי בנקודה אחת.

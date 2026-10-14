@@ -193,7 +193,7 @@
   PAGES.onboard = () => {
     const sel = PAGES.onboard.sel || 'student';
     return `<div class="onboard">
-      <div class="logo"><img src="icon.svg" alt="סמל מישור הנוף"><h1>ברוכים הבאים למישור הנוף</h1><p class="sub">${esc(S.school.motto)}</p></div>
+      <div class="logo"><img src="logo.png" alt="סמל בית הספר מישור הנוף"><h1>ברוכים הבאים למישור הנוף</h1><p class="sub">${esc(S.school.fullName)}<br><b class="motto">${esc(S.school.motto)}</b></p></div>
       <div class="card">
         <b>מי נכנס/ת?</b>
         ${Object.entries(ROLES).map(([k, r]) => `<button class="role-card ${sel === k ? 'on' : ''}" data-act="pickRole" data-id="${k}">
@@ -670,7 +670,7 @@
       <button class="btn danger block" data-act="reset">איפוס נתוני ההדגמה</button>
     </div>`;
 
-  PAGES.about = () => `<div style="text-align:center"><img src="icon.svg" width="96" height="96" style="border-radius:24px" alt=""><h1>${esc(S.school.name)}</h1><p class="sub">${esc(S.school.motto)}</p></div>
+  PAGES.about = () => `<div style="text-align:center"><img src="logo.png" class="about-logo" alt="סמל בית הספר מישור הנוף"><h1>${esc(S.school.fullName)}</h1><p class="sub"><b class="motto">${esc(S.school.motto)}</b></p></div>
     <div class="card"><ul class="list">
       <li class="row"><span class="ico-circle">📍</span><span class="grow">${esc(S.school.address)}</span></li>
       <li class="row"><span class="ico-circle">📞</span><a class="grow" href="tel:${esc(S.school.phone)}">${esc(S.school.phone)}</a></li>
@@ -886,7 +886,7 @@
     askNotify: () => {
       if (!('Notification' in window)) return toast('הדפדפן לא תומך בהתראות');
       Notification.requestPermission().then(p => {
-        if (p === 'granted') { new Notification('מישור הנוף', { body: 'ההתראות הופעלו בהצלחה 🎉', icon: 'icon.svg' }); toast('ההתראות הופעלו'); }
+        if (p === 'granted') { new Notification('מישור הנוף', { body: 'ההתראות הופעלו בהצלחה 🎉', icon: 'icon-192.png' }); toast('ההתראות הופעלו'); }
         else toast('ההרשאה להתראות לא ניתנה');
       });
     },

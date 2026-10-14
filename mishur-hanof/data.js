@@ -46,10 +46,11 @@
   };
 
   window.MH_SEED = {
-    version: 1,
+    version: 2,
     school: {
       name: 'מישור הנוף',
-      motto: 'רואים רחוק – צומחים יחד',
+      fullName: 'בית הספר הממלכתי "מישור הנוף"',
+      motto: 'להקשיב · להבין · לאהוב',
       phone: '04-0000000',
       email: 'office@mishur-hanof.example',
       address: 'רחוב הנוף 1',
