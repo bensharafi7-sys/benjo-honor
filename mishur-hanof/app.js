@@ -61,7 +61,22 @@
   const isAdmin = () => role() === 'admin';
   const isStaff = () => isTeacher() || isAdmin();
   const child = () => S.children.find(c => c.id === P.childId) || S.children[0];
-  const myClass = () => isParent() ? child().classId : (S.user && S.user.classId) || 'ח2';
+  const myClass = () => isParent() ? child().classId : (S.user && S.user.classId) || 'ד2';
+  const isGan = c => String(c || '').startsWith('גן');
+  const ganMode = () => isGan(myClass());
+  const unitWord = () => ganMode() ? 'הגן' : 'הכיתה';
+  function ganNow() {
+    const dow = new Date().getDay();
+    if (dow === 6) return { state: 'off' };
+    const m = nowMins();
+    const r = S.ganRoutine;
+    for (let i = 0; i < r.length; i++) {
+      if (m >= mins(r[i].from) && m < mins(r[i].to)) return { state: 'in', i, a: r[i], next: r[i + 1], pct: (m - mins(r[i].from)) / (mins(r[i].to) - mins(r[i].from)) };
+      if (m < mins(r[i].from)) return { state: 'before', i, a: r[i] };
+    }
+    return { state: 'done' };
+  }
+  const todayPickup = () => ((S.pickups || {})[todayISO()] || {})[child().id];
   const firstName = () => (S.user && S.user.name || '').split(' ')[0];
 
   function toast(msg) {
@@ -87,9 +102,9 @@
   function closeSheet() { $('#sheet').classList.add('hidden'); $('#sheetContent').innerHTML = ''; }
 
   const ROLES = {
-    student: { label: 'תלמיד/ה', ico: '🎒', desc: 'מערכת שעות, שיעורי בית, ציונים וחוגים' },
-    parent:  { label: 'הורה',     ico: '👨‍👩‍👧', desc: 'מעקב אחרי הילדים, אישורים, דיווח היעדרות' },
-    teacher: { label: 'מורה',     ico: '🧑‍🏫', desc: 'נוכחות, משימות, ציונים והודעות לכיתה' },
+    student: { label: 'תלמיד/ה', ico: '🎒', desc: 'לתלמידי א׳–ו׳: מערכת שעות, שיעורי בית וחוגים' },
+    parent:  { label: 'הורה',     ico: '👨‍👩‍👧', desc: 'גן וכיתות א׳–ו׳: יומן, איסוף, אישורים והיעדרות' },
+    teacher: { label: 'מורה / גננת', ico: '🧑‍🏫', desc: 'נוכחות, יומן כיתה/גן, משימות והודעות להורים' },
     admin:   { label: 'הנהלה / מזכירות', ico: '🏫', desc: 'לוח בקרה, פרסום הודעות, פניות וסקרים' }
   };
 
@@ -116,6 +131,7 @@
     }).sort((a, b) => b.avg - a.avg);
   }
   function overallAvg(avgs = subjectAverages()) { return avgs.length ? avgs.reduce((s, a) => s + a.avg, 0) / avgs.length : 0; }
+  const verbal = n => n >= 95 ? 'מצוין' : n >= 85 ? 'טוב מאוד' : n >= 75 ? 'טוב' : n >= 65 ? 'כמעט טוב' : n >= 55 ? 'מספיק' : 'דרוש שיפור';
   const gradeColor = n => n >= 90 ? 'var(--ok)' : n >= 75 ? 'var(--brand)' : n >= 60 ? 'var(--warn)' : 'var(--danger)';
 
   function currentLesson() {
@@ -133,11 +149,12 @@
 
   function alerts() {
     const a = [];
+    if (isParent() && !todayPickup() && new Date().getDay() !== 6 && nowMins() < mins('14:00')) a.push({ ico: '🚗', text: `מי אוסף את ${child().name} היום? עדכנו את ${ganMode() ? 'הגננת' : 'המחנכת'}`, go: 'pickup' });
     const hw = openHw().filter(h => daysFrom(h.due) <= 1);
     if (P.notifyHw && hw.length) a.push({ ico: '📝', text: `${hw.length} משימות להגשה עד מחר`, go: 'tasks' });
     if (P.notifyExams) upcomingEvents(4).filter(e => e.type === 'exam').forEach(e => a.push({ ico: '🧪', text: `${e.title} – ${rel(e.date)}`, go: 'calendar' }));
     const ch = changesFor(todayISO()).concat(changesFor(addDaysISO(1)));
-    ch.forEach(c => a.push({ ico: '🔄', text: `שינוי במערכת (${rel(c.date)}, שיעור ${c.period}): ${c.text}`, go: 'schedule' }));
+    if (!ganMode()) ch.forEach(c => a.push({ ico: '🔄', text: `שינוי במערכת (${rel(c.date)}, שיעור ${c.period}): ${c.text}`, go: 'schedule' }));
     if (unreadAnn()) a.push({ ico: '📢', text: `${unreadAnn()} הודעות חדשות מבית הספר`, go: 'news' });
     if (P.notifyMsgs && unreadMsgs()) a.push({ ico: '💬', text: `${unreadMsgs()} הודעות שלא נקראו`, go: 'messages' });
     if (isParent()) { const p = S.permits.filter(x => !x.signed).length; if (p) a.push({ ico: '✍️', text: `${p} אישורים ממתינים לחתימה`, go: 'permits' }); }
@@ -195,21 +212,27 @@
     return `<div class="card"><ul class="list">${items.map(fn).join('')}</ul></div>`;
   }
 
+  function diaryCard(d) {
+    return `<div class="card"><div style="display:flex;gap:12px;align-items:flex-start"><span class="ico-circle">${d.ico || '📔'}</span>
+      <div class="grow" style="min-width:0"><div class="title">${esc(d.title)}</div><div class="meta">${esc(d.author)} · ${rel(d.date)}${isStaff() ? ' · ' + esc(d.classId) : ''}</div>
+      <p style="margin:6px 0 0;white-space:pre-wrap">${esc(d.text)}</p></div></div></div>`;
+  }
+
   // ---------- Pages ----------
   const PAGES = {};
 
   PAGES.onboard = () => {
     const sel = PAGES.onboard.sel || 'student';
     return `<div class="onboard">
-      <div class="logo"><img src="logo.png" alt="סמל בית הספר מישור הנוף"><h1>ברוכים הבאים למישור הנוף</h1><p class="sub">${esc(S.school.fullName)}<br><b class="motto">${esc(S.school.motto)}</b></p></div>
+      <div class="logo"><img src="logo.png" alt="סמל בית הספר מישור הנוף"><h1>ברוכים הבאים למישור הנוף</h1><p class="sub">${esc(S.school.fullName)} · ${esc(S.school.grades)}<br><b class="motto">${esc(S.school.motto)}</b></p></div>
       <div class="card">
         <b>מי נכנס/ת?</b>
         ${Object.entries(ROLES).map(([k, r]) => `<button class="role-card ${sel === k ? 'on' : ''}" data-act="pickRole" data-id="${k}">
           <span class="ico-circle">${r.ico}</span><span><b>${r.label}</b><br><small class="meta">${r.desc}</small></span></button>`).join('')}
         <label class="f" for="obName">שם מלא</label>
         <input id="obName" class="input" placeholder="${sel === 'teacher' ? 'מיכל אברהם' : sel === 'parent' ? 'רחל ישראלי' : sel === 'admin' ? 'שלומית גבאי' : 'נועם ישראלי'}" autocomplete="name">
-        ${sel === 'student' || sel === 'teacher' ? `<label class="f" for="obClass">${sel === 'teacher' ? 'כיתת חינוך' : 'כיתה'}</label>
-          <select id="obClass" class="input">${S.classes.map(c => `<option ${c === 'ח2' ? 'selected' : ''}>${c}</option>`).join('')}</select>` : ''}
+        ${sel === 'student' || sel === 'teacher' ? `<label class="f" for="obClass">${sel === 'teacher' ? 'כיתה או גן' : 'כיתה'}</label>
+          <select id="obClass" class="input">${S.classes.filter(c => sel === 'teacher' || !isGan(c)).map(c => `<option ${c === 'ד2' ? 'selected' : ''}>${c}</option>`).join('')}</select>` : ''}
         <button class="btn block" style="margin-top:16px" data-act="finishOnboard">כניסה</button>
         <p class="meta" style="text-align:center;margin:10px 0 0">גרסת הדגמה · הנתונים נשמרים במכשיר בלבד</p>
       </div></div>`;
@@ -233,11 +256,23 @@
     } else {
       nowHtml = `<small>סוף שבוע</small><b>שבת שלום! 🌄</b><small>נתראה ביום ראשון</small>`;
     }
+    const gan = ganMode();
+    if (gan) {
+      const g = ganNow();
+      if (g.state === 'in') nowHtml = `<small>עכשיו ב${esc(myClass())} · <bdi dir="ltr">${g.a.from}–${g.a.to}</bdi></small><b>${g.a.ico} ${esc(g.a.title)}</b>${g.next ? `<small>אחר כך: ${esc(g.next.title)}</small>` : ''}<div class="progress"><i style="width:${Math.round(g.pct * 100)}%"></i></div>`;
+      else if (g.state === 'before') nowHtml = `<small>${esc(myClass())} נפתח ב-${g.a.from}</small><b>${g.a.ico} ${esc(g.a.title)}</b>`;
+      else if (g.state === 'done') nowHtml = `<small>יום הגן הסתיים</small><b>מה עשינו היום? ראו ביומן הגן 📔</b>`;
+    }
+    const tp = isParent() ? todayPickup() : null;
+    const pickupLine = isParent() && new Date().getDay() !== 6 ? `<small style="display:block;margin-top:6px">🚗 איסוף היום: ${tp ? esc(tp.by) + (tp.afterschool ? ' · צהרון' : '') : 'טרם עודכן'}</small>` : '';
+    const lastDiary = (S.diary || []).filter(d => d.classId === myClass()).sort((a, b) => b.date.localeCompare(a.date))[0];
     const kid = isParent() ? `<div class="chips" style="margin:12px 0 0">${S.children.map(c => `<button class="chip ${c.id === child().id ? 'on' : ''}" data-act="pickChild" data-id="${c.id}">${esc(c.name)} · ${esc(c.classId)}</button>`).join('')}</div>` : '';
     const avg = overallAvg();
     const att = S.attendance.filter(a => a.type === 'absent').length;
     const tiles = isParent()
-      ? [['permits', '✍️', 'אישורים', S.permits.filter(p => !p.signed).length], ['absence', '🏠', 'דיווח היעדרות'], ['grades', '📊', 'ציונים'], ['attendance', '🗓️', 'נוכחות'], ['calendar', '📅', 'אירועים'], ['contacts', '📞', 'אנשי קשר'], ['buses', '🚌', 'הסעות'], ['menu', '🍽️', 'תפריט']]
+      ? [['pickup', '🚗', 'איסוף היום'], ['diary', '📔', gan ? 'יומן הגן' : 'יומן הכיתה'], ['permits', '✍️', 'אישורים', S.permits.filter(p => !p.signed).length], ['absence', '🏠', 'דיווח היעדרות']]
+        .concat(gan ? [['calendar', '📅', 'אירועים'], ['clubs', '🧸', 'צהרון'], ['menu', '🍽️', 'תפריט'], ['contacts', '📞', 'אנשי קשר']]
+                    : [['grades', '📊', 'מבחנים'], ['attendance', '🗓️', 'נוכחות'], ['calendar', '📅', 'אירועים'], ['clubs', '⚽', 'חוגים וצהרון']])
       : [['grades', '📊', 'ציונים'], ['calendar', '📅', 'מבחנים'], ['clubs', '⚽', 'חוגים'], ['counsel', '💚', 'אוזן קשבת'], ['library', '📚', 'ספרייה', S.library.filter(b => daysFrom(b.due) < 0).length], ['lost', '🔎', 'אבדות'], ['buses', '🚌', 'הסעות'], ['menu', '🍽️', 'תפריט']];
     const al = alerts();
     return `
@@ -245,22 +280,30 @@
         <h1>${greet}${firstName() ? ', ' + esc(firstName()) : ''} 👋</h1>
         <p>${fmtDate(todayISO())}${isParent() ? '' : ' · כיתה ' + esc(myClass())}</p>
         ${kid}
-        <div class="now-box">${nowHtml}</div>
+        <div class="now-box">${nowHtml}${pickupLine}</div>
       </section>
       ${al.length ? `<h2>דורש תשומת לב</h2><div class="card"><ul class="list">${al.slice(0, 4).map(x => `<li class="row"><button class="rowbtn" data-go="${x.go}"><span class="ico-circle">${x.ico}</span><span class="grow">${esc(x.text)}</span><span>‹</span></button></li>`).join('')}</ul></div>` : ''}
       <h2>גישה מהירה</h2>
       <div class="grid4">${tiles.map(([go, ico, l, b]) => `<button class="tile" data-go="${go}"><span class="ico">${ico}</span>${l}${b ? `<span class="badge count">${b}</span>` : ''}</button>`).join('')}</div>
-      <div class="grid2" style="margin-top:12px">
-        <button class="card stat" data-go="grades"><b>${avg ? avg.toFixed(1) : '—'}</b><small>ממוצע כללי</small></button>
+      ${lastDiary ? `<h2>${gan ? 'יומן הגן' : 'יומן הכיתה'} <button class="link" data-go="diary">הכל</button></h2>${diaryCard(lastDiary)}` : ''}
+      ${gan ? '' : `<div class="grid2" style="margin-top:12px">
+        <button class="card stat" data-go="grades"><b>${avg ? avg.toFixed(1) : '—'}</b><small>ממוצע מבחנים</small></button>
         <button class="card stat" data-go="attendance"><b>${att}</b><small>חיסורים במחצית</small></button>
       </div>
-      <h2>משימות קרובות <button class="link" data-go="tasks">הכל</button></h2>
-      ${sectionList(openHw().slice(0, 3), hwRow, 'אין משימות פתוחות')}
-      <h2>מבחנים ואירועים <button class="link" data-go="calendar">ללוח</button></h2>
+      <h2>שיעורי בית <button class="link" data-go="tasks">הכל</button></h2>
+      ${sectionList(openHw().slice(0, 3), hwRow, 'אין שיעורי בית פתוחים')}`}
+      <h2>${gan ? 'אירועים בגן' : 'מבחנים ואירועים'} <button class="link" data-go="calendar">ללוח</button></h2>
       ${sectionList(upcomingEvents(14).slice(0, 3), eventRow, 'אין אירועים בשבועיים הקרובים')}
       <h2>הודעות אחרונות <button class="link" data-go="news">הכל</button></h2>
       ${sectionList(visibleAnn().slice(0, 2), annRow, 'אין הודעות')}`;
   };
+
+  function pickupList() {
+    const rec = (S.pickups || {})[todayISO()] || {};
+    const rows = Object.values(rec);
+    if (!rows.length) return '';
+    return `<h2>איסוף היום</h2><div class="card"><ul class="list">${rows.map(p => `<li class="row"><span class="ico-circle">🚗</span><div class="grow"><div class="title">${esc(p.child)} · ${esc(p.classId)}</div><div class="meta">${esc(p.by)}${p.time ? ' · ' + esc(p.time) : ''}${p.afterschool ? ' · נשאר/ת בצהרון' : ''}${p.note ? ' · ' + esc(p.note) : ''}</div></div></li>`).join('')}</ul></div>`;
+  }
 
   PAGES.teacherHome = () => {
     const dow = new Date().getDay();
@@ -270,7 +313,7 @@
     const marked = S.classAttendance && S.classAttendance[today];
     const reports = S.absenceReports.filter(r => !r.seen);
     return `
-      <section class="hero"><h1>שלום ${esc(firstName())} 👋</h1><p>${fmtDate(today)} · מחנכת ${esc(S.user.classId)}</p>
+      <section class="hero"><h1>שלום ${esc(firstName())} 👋</h1><p>${fmtDate(today)} · ${isGan(S.user.classId) ? 'גננת' : 'מחנכת'} ${esc(S.user.classId)}</p>
         <div class="now-box"><small>היום במערכת</small><b>${lessons.length ? lessons.length + ' שיעורים · ' + lessons[0].p.from + '–' + lessons[lessons.length - 1].p.to : 'אין לימודים היום'}</b>
         <small>${marked ? '✓ נוכחות היום נרשמה' : 'טרם נרשמה נוכחות להיום'}</small></div></section>
       <h2>פעולות מהירות</h2>
@@ -280,10 +323,11 @@
         <button class="tile" data-act="newGrade"><span class="ico">💯</span>הזנת ציון</button>
         <button class="tile" data-act="newEvent"><span class="ico">🧪</span>מבחן/אירוע</button>
         <button class="tile" data-act="newAnn"><span class="ico">📢</span>הודעה לכיתה</button>
-        <button class="tile" data-act="newChange"><span class="ico">🔄</span>שינוי מערכת</button>
+        <button class="tile" data-act="newDiary"><span class="ico">📔</span>יומן ${isGan(S.user.classId) ? 'הגן' : 'הכיתה'}</button>
         <button class="tile" data-act="newNote"><span class="ico">⭐</span>משוב לתלמיד</button>
         <button class="tile" data-go="inbox"><span class="ico">📥</span>דיווחים${reports.length ? `<span class="badge count">${reports.length}</span>` : ''}</button>
       </div>
+      ${pickupList()}
       ${reports.length ? `<h2>דיווחי היעדרות מהורים</h2><div class="card"><ul class="list">${reports.slice(0, 3).map(r => `<li class="row"><span class="ico-circle">🏠</span><div class="grow"><div class="title">${esc(r.child)} · ${fmtShort(r.from)}${r.to !== r.from ? '–' + fmtShort(r.to) : ''}</div><div class="meta">${esc(r.reason)}${r.note ? ' – ' + esc(r.note) : ''}</div></div><button class="btn sm ghost" data-act="seeReport" data-id="${r.id}">ראיתי</button></li>`).join('')}</ul></div>` : ''}
       <h2>המשימות שנתתי <button class="link" data-go="tasks">הכל</button></h2>
       ${sectionList(S.homework.filter(h => !mySubjects.length || mySubjects.includes(h.subject)).filter(h => daysFrom(h.due) >= 0).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 4), hwRow, 'אין משימות פעילות')}
@@ -324,6 +368,16 @@
   };
 
   PAGES.schedule = () => {
+    if (ganMode()) {
+      const g = ganNow();
+      const fri = new Date().getDay() === 5;
+      return `<h1>סדר יום בגן</h1><p class="sub">${esc(myClass())} · ${fmtDate(todayISO())}${fri ? ' · ביום שישי הגן מסתיים ב-12:30' : ''}</p>
+        ${upcomingEvents(0).map(e => `<div class="notice info" style="margin-bottom:10px">${(EVT[e.type] || EVT.event).ico} היום: ${esc(e.title)}</div>`).join('')}
+        ${S.ganRoutine.map((a, i) => `<div class="lesson ${g.state === 'in' && g.i === i ? 'now' : ''}"><div class="num" style="width:auto;min-width:46px"><bdi dir="ltr">${a.from}</bdi></div>
+          <span class="ico-circle">${a.ico}</span><div class="grow"><div class="title">${esc(a.title)}</div><div class="meta"><bdi dir="ltr">${a.from}–${a.to}</bdi></div></div>
+          ${g.state === 'in' && g.i === i ? '<span class="badge green">עכשיו</span>' : ''}</div>`).join('')}
+        <div class="notice" style="margin-top:12px">🎒 מה מביאים כל יום: בקבוק מים, כובע, בגדים להחלפה, ארוחת בוקר בריאה (בלי ממתקים ובלי אגוזים)</div>`;
+    }
     const sel = PAGES.schedule.day != null ? PAGES.schedule.day : Math.min(new Date().getDay(), 5);
     const base = parseISO(todayISO());
     base.setDate(base.getDate() - base.getDay()); // Sunday of this week
@@ -366,7 +420,7 @@
     const usedSubjects = [...new Set(S.homework.map(h => h.subject))];
     const total = classItems(S.homework).length;
     const done = classItems(S.homework).filter(h => S.hwDone.includes(h.id)).length;
-    return `<h1>${isStaff() ? 'משימות ושיעורי בית' : 'המשימות שלי'}</h1>
+    return `<h1>${isStaff() ? 'שיעורי בית ומשימות' : 'שיעורי הבית שלי'}</h1>
       ${!isStaff() ? `<div class="card" style="margin:10px 0 14px"><div style="display:flex;justify-content:space-between"><b>התקדמות</b><span class="meta">${done}/${total} הושלמו</span></div>
         <div class="bar-track" style="margin-top:8px"><i style="width:${total ? done / total * 100 : 0}%;background:var(--ok)"></i></div></div>` : '<p class="sub">משימות שפורסמו לכיתות</p>'}
       <div class="chips">${(isStaff() ? [['open', 'פעילות'], ['all', 'הכל']] : [['open', 'פתוחות'], ['done', 'הושלמו'], ['all', 'הכל']]).map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-act="taskFilter" data-id="${k}">${l}</button>`).join('')}
@@ -382,13 +436,14 @@
     const all = overallAvg(avgs);
     const recent = S.grades.slice().sort((a, b) => b.date.localeCompare(a.date));
     const C = 2 * Math.PI * 40;
-    return `<h1>ציונים</h1><p class="sub">${isParent() ? esc(child().name) + ' · ' : ''}מחצית א׳</p>
+    if (ganMode()) return `<h1>הערכות</h1><div class="card empty"><div class="e">🌱</div>בגן אין ציונים. התפתחות הילד/ה מתועדת ביומן הגן ובשיחות עם הגננת.<br><button class="btn ghost" style="margin-top:12px" data-go="diary">ליומן הגן</button></div>`;
+    return `<h1>מבחנים והערכות</h1><p class="sub">${isParent() ? esc(child().name) + ' · ' : ''}מחצית א׳</p>
       <div class="card" style="display:flex;align-items:center;gap:16px">
         <svg class="ring" viewBox="0 0 96 96" role="img" aria-label="ממוצע ${all.toFixed(1)}">
           <circle cx="48" cy="48" r="40" fill="none" stroke="var(--line)" stroke-width="10"/>
           <circle cx="48" cy="48" r="40" fill="none" stroke="${gradeColor(all)}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C * all / 100} ${C}" transform="rotate(-90 48 48)"/>
           <text x="48" y="54" text-anchor="middle" font-size="20" font-weight="800" fill="var(--text)">${all.toFixed(1)}</text></svg>
-        <div class="grow"><b>ממוצע כללי</b><div class="meta">${S.grades.length} ציונים ב-${avgs.length} מקצועות</div>
+        <div class="grow"><b>ממוצע כללי · ${verbal(all)}</b><div class="meta">${S.grades.length} ציונים ב-${avgs.length} מקצועות</div>
           <div class="meta">חזק ביותר: ${avgs[0] ? esc(subj(avgs[0].k).name) : '—'}</div>
           <button class="btn sm ghost" style="margin-top:8px" data-act="whatIf">🧮 מחשבון "מה אם"</button></div>
       </div>
@@ -397,7 +452,7 @@
       <h2>ציונים אחרונים</h2>
       <div class="card"><ul class="list">${recent.map(g => `<li class="row"><span class="swatch" style="background:${subj(g.subject).color}"></span>
         <div class="grow"><div class="title">${esc(g.title)}</div><div class="meta">${esc(subj(g.subject).name)} · ${fmtShort(g.date)} · משקל ${g.weight}</div></div>
-        <b style="color:${gradeColor(g.score)};font-size:1.15rem">${g.score}</b></li>`).join('')}</ul></div>
+        <span style="text-align:center"><b style="color:${gradeColor(g.score)};font-size:1.15rem;display:block">${g.score}</b><small class="meta">${verbal(g.score)}</small></span></li>`).join('')}</ul></div>
       <h2>משובים מהמורים</h2>
       ${sectionList(S.notes.slice().sort((a, b) => b.date.localeCompare(a.date)), n => `<li class="row"><span class="ico-circle">${n.type === 'praise' ? '⭐' : n.type === 'missing' ? '🎒' : '⚠️'}</span><div class="grow"><div class="title">${esc(n.text)}</div><div class="meta">${esc(subj(n.subject).name)} · ${rel(n.date)}</div></div></li>`, 'אין משובים')}`;
   };
@@ -500,10 +555,42 @@
       <form class="composer" data-form="sendMsg" data-id="${t.id}"><input class="input" name="text" placeholder="כתיבת הודעה..." autocomplete="off" required><button class="btn">שליחה</button></form>`;
   };
 
+  PAGES.diary = () => {
+    const cls = isAdmin() ? null : myClass();
+    const list = (S.diary || []).filter(d => !cls || d.classId === cls).sort((a, b) => b.date.localeCompare(a.date));
+    return `<h1>${isAdmin() ? 'יומני כיתות וגנים' : 'יומן ' + (ganMode() ? 'הגן' : 'הכיתה')}</h1>
+      <p class="sub">${cls ? esc(cls) + ' · ' : ''}מה עשינו ולמדנו – ישר מ${ganMode() ? 'הגננת' : 'הצוות'}</p>
+      ${list.length ? `<div class="stack">${list.map(diaryCard).join('')}</div>` : '<div class="card empty"><div class="e">📔</div>עדיין אין עדכונים ביומן</div>'}
+      ${isStaff() ? '<button class="fab" data-act="newDiary" aria-label="עדכון ביומן">+</button>' : ''}`;
+  };
+
+  PAGES.pickup = () => {
+    if (!isParent()) return `<h1>איסוף היום</h1>${pickupList() || '<div class="card empty">אין עדכוני איסוף מהורים להיום</div>'}`;
+    const c = child();
+    const people = (S.pickupPeople || {})[c.id] || [];
+    const tp = todayPickup();
+    const endTime = new Date().getDay() === 5 ? '12:30' : isGan(c.classId) ? '14:00' : '13:10';
+    return `<h1>איסוף ילדים</h1><p class="sub">${fmtDate(todayISO())} · סיום ${isGan(c.classId) ? 'הגן' : 'הלימודים'} ב-${endTime}</p>
+      <div class="chips">${S.children.map(k => `<button class="chip ${k.id === c.id ? 'on' : ''}" data-act="pickChild" data-id="${k.id}">${esc(k.name)} · ${esc(k.classId)}</button>`).join('')}</div>
+      ${tp ? `<div class="notice info" style="margin-bottom:12px">✓ עודכן: ${esc(tp.by)}${tp.time ? ' ב-' + esc(tp.time) : ''}${tp.afterschool ? ' · נשאר/ת בצהרון' : ''}. ${isGan(c.classId) ? 'הגננת' : 'המחנכת'} רואה את העדכון.</div>` : ''}
+      <form class="card" data-form="pickup">
+        <label class="f" style="margin-top:0" for="pkBy">מי אוסף/ת את ${esc(c.name)} היום?</label>
+        <select class="input" id="pkBy" name="by">${people.map(p => `<option ${tp && tp.by === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}<option ${tp && !people.includes(tp.by) ? 'selected' : ''}>הולך/ת הביתה בהסעה</option></select>
+        <div class="switch-row"><span>נשאר/ת היום בצהרון (עד 16:30)</span><input type="checkbox" class="toggle" name="afterschool" ${tp && tp.afterschool ? 'checked' : ''}></div>
+        <label class="f" for="pkTime">איסוף מוקדם? (לא חובה)</label><input class="input" id="pkTime" type="time" name="time" value="${tp ? esc(tp.time || '') : ''}">
+        <label class="f" for="pkNote">הערה לצוות</label><input class="input" id="pkNote" name="note" placeholder="למשל: לבקש ממנה לקחת את המעיל" value="${tp ? esc(tp.note || '') : ''}">
+        <button class="btn block" style="margin-top:14px">עדכון ${isGan(c.classId) ? 'הגננת' : 'המחנכת'}</button>
+      </form>
+      <h2>מורשים לאסוף את ${esc(c.name)}</h2>
+      <div class="card"><ul class="list">${people.map((p, i) => `<li class="row"><span class="ico-circle">👤</span><span class="grow title">${esc(p)}</span><button class="btn sm ghost" data-act="delPickupPerson" data-id="${i}">הסרה</button></li>`).join('')}</ul>
+        <form data-form="addPickupPerson" style="display:flex;gap:8px;margin-top:10px"><input class="input" name="name" id="pkNew" placeholder="שם וקרבה, למשל: דודה נועה" required><button class="btn">הוספה</button></form></div>
+      <p class="meta" style="margin-top:10px">🔒 ${isGan(c.classId) ? 'הגננת לא תמסור' : 'הצוות לא ימסור'} ילד/ה למי שאינו ברשימה בלי אישור מההורים.</p>`;
+  };
+
   PAGES.more = () => {
     const groups = [
-      ['לימודים', [['grades', '📊', 'ציונים ומשובים'], ['attendance', '🗓️', 'נוכחות'], ['calendar', '📅', 'לוח אירועים ומבחנים'], ['library', '📚', 'הספרייה שלי']]],
-      ['הורים', [['permits', '✍️', 'אישורים וטפסים לחתימה'], ['absence', '🏠', 'דיווח היעדרות']]],
+      ['לימודים', [['diary', '📔', 'יומן הכיתה / הגן'], ['tasks', '📝', 'שיעורי בית'], ['grades', '📊', 'מבחנים ומשובים'], ['attendance', '🗓️', 'נוכחות'], ['calendar', '📅', 'לוח אירועים ומבחנים'], ['library', '📚', 'הספרייה שלי']]],
+      ['הורים', [['pickup', '🚗', 'איסוף ילדים וצהרון'], ['permits', '✍️', 'אישורים וטפסים לחתימה'], ['absence', '🏠', 'דיווח היעדרות']]],
       ['קהילה ושירותים', [['news', '📢', 'הודעות בית הספר'], ['clubs', '⚽', 'חוגים ופעילויות'], ['polls', '🗳️', 'סקרים והצבעות'], ['lost', '🔎', 'אבדות ומציאות'], ['buses', '🚌', 'הסעות'], ['menu', '🍽️', 'תפריט ארוחת צהריים']]],
       ['רווחה וביטחון', [['counsel', '💚', 'אוזן קשבת – פנייה ליועצת'], ['emergency', '🚨', 'חירום ונהלי ביטחון'], ['contacts', '📞', 'ספר טלפונים']]],
       ['צוות', [['roll', '✅', 'רישום נוכחות לכיתה'], ['inbox', '📥', 'פניות ודיווחים']]],
@@ -542,7 +629,7 @@
     <div class="notice red" style="margin-bottom:12px">🚨 במצב של סכנה מיידית – פנו מיד למבוגר בבית הספר או חייגו <b>&nbsp;100&nbsp;</b>. פגיעה ברשת: <b>&nbsp;105&nbsp;</b>. ער"ן: <b>&nbsp;1201</b></div>
     <form class="card" data-form="counsel">
       <label class="f">במה מדובר?</label>
-      <select class="input" name="topic"><option>לחץ לימודי / מבחנים</option><option>חברים / חברה</option><option>הצקות או חרם</option><option>בריונות ברשת</option><option>משהו בבית</option><option>הרגשה כללית</option><option>אחר</option></select>
+      <select class="input" name="topic">${(isParent() ? ['קושי חברתי', 'קושי רגשי או התנהגותי', 'קשיי למידה', 'מעבר מהגן לכיתה א׳', 'שינוי במשפחה', 'אחר'] : ['מישהו מציק לי', 'ריב עם חברים', 'קשה לי בלימודים', 'משהו בבית', 'אני עצוב/ה או מפחד/ת', 'משהו ברשת או בטלפון', 'אחר']).map(t => `<option>${t}</option>`).join('')}</select>
       <label class="f">ספרו לנו</label><textarea class="input" name="text" required placeholder="כתבו כמה שנוח לכם..."></textarea>
       <label class="f">כמה דחוף?</label>
       <select class="input" name="urgency"><option>אפשר לדבר השבוע</option><option>הייתי רוצה לדבר היום</option><option>דחוף</option></select>
@@ -635,7 +722,7 @@
     const rec = S.classAttendance[today] || {};
     const counts = { p: 0, l: 0, a: 0 };
     S.students.forEach(s => counts[rec[s] || 'p']++);
-    return `<h1>רישום נוכחות</h1><p class="sub">כיתה ${esc(S.user.classId || 'ח2')} · ${fmtDate(today)}</p>
+    return `<h1>רישום נוכחות</h1><p class="sub">כיתה ${esc(S.user.classId || 'ד2')} · ${fmtDate(today)}</p>
       <div class="grid4" style="grid-template-columns:repeat(3,1fr)"><div class="card stat"><b style="color:var(--ok)">${counts.p}</b><small>נוכחים</small></div><div class="card stat"><b style="color:var(--warn)">${counts.l}</b><small>איחור</small></div><div class="card stat"><b style="color:var(--danger)">${counts.a}</b><small>חסרים</small></div></div>
       <div class="card" style="margin-top:12px"><ul class="list">${S.students.map(s => {
         const v = rec[s] || 'p';
@@ -648,6 +735,7 @@
   PAGES.inbox = () => {
     if (!isStaff()) return '<div class="empty">עמוד זה זמין לצוות בלבד</div>';
     return `<h1>פניות ודיווחים</h1>
+      ${pickupList() || '<h2>איסוף היום</h2><div class="card empty">אין עדכוני איסוף מהורים להיום</div>'}
       <h2>דיווחי היעדרות מהורים</h2>
       ${sectionList(S.absenceReports.slice().reverse(), r => `<li class="row"><span class="ico-circle">🏠</span><div class="grow"><div class="title">${esc(r.child)} · ${esc(r.reason)}</div><div class="meta">${fmtShort(r.from)}${r.to !== r.from ? '–' + fmtShort(r.to) : ''}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
         ${r.seen ? '<span class="badge green">טופל</span>' : `<button class="btn sm ghost" data-act="seeReport" data-id="${r.id}">אישור</button>`}</li>`, 'אין דיווחים חדשים')}
@@ -678,7 +766,7 @@
       <button class="btn danger block" data-act="reset">איפוס נתוני ההדגמה</button>
     </div>`;
 
-  PAGES.about = () => `<div style="text-align:center"><img src="logo.png" class="about-logo" alt="סמל בית הספר מישור הנוף"><h1>${esc(S.school.fullName)}</h1><p class="sub"><b class="motto">${esc(S.school.motto)}</b></p></div>
+  PAGES.about = () => `<div style="text-align:center"><img src="logo.png" class="about-logo" alt="סמל בית הספר מישור הנוף"><h1>${esc(S.school.fullName)}</h1><p class="sub">${esc(S.school.grades)}<br><b class="motto">${esc(S.school.motto)}</b></p></div>
     <div class="card"><ul class="list">
       <li class="row"><span class="ico-circle">📍</span><span class="grow">${esc(S.school.address)}</span></li>
       <li class="row"><span class="ico-circle">📞</span><a class="grow" href="tel:${esc(S.school.phone)}">${esc(S.school.phone)}</a></li>
@@ -712,9 +800,9 @@
 
   // ---------- Navigation ----------
   function tabsFor() {
-    if (isTeacher()) return [['home', '🏠', 'בית'], ['roll', '✅', 'נוכחות'], ['tasks', '📝', 'משימות'], ['news', '💬', 'הודעות'], ['more', '☰', 'עוד']];
+    if (isTeacher()) return [['home', '🏠', 'בית'], ['roll', '✅', 'נוכחות'], ['diary', '📔', 'יומן'], ['news', '💬', 'הודעות'], ['more', '☰', 'עוד']];
     if (isAdmin()) return [['home', '📊', 'בקרה'], ['calendar', '📅', 'לוח'], ['news', '📢', 'הודעות'], ['inbox', '📥', 'פניות'], ['more', '☰', 'עוד']];
-    if (isParent()) return [['home', '🏠', 'בית'], ['schedule', '🕘', 'מערכת'], ['grades', '📊', 'ציונים'], ['news', '💬', 'הודעות'], ['more', '☰', 'עוד']];
+    if (isParent()) return [['home', '🏠', 'בית'], ['schedule', '🕘', ganMode() ? 'סדר יום' : 'מערכת'], ['diary', '📔', 'יומן'], ['news', '💬', 'הודעות'], ['more', '☰', 'עוד']];
     return [['home', '🏠', 'בית'], ['schedule', '🕘', 'מערכת'], ['tasks', '📝', 'משימות'], ['news', '💬', 'הודעות'], ['more', '☰', 'עוד']];
   }
   const TAB_BADGE = { news: () => unreadAnn() + unreadMsgs(), tasks: () => isStaff() ? 0 : openHw().filter(h => daysFrom(h.due) <= 1).length, inbox: () => S.counsel.filter(c => !c.handled).length + S.absenceReports.filter(r => !r.seen).length };
@@ -750,7 +838,7 @@
 
   // ---------- Forms in sheets ----------
   const subjOptions = (sel) => Object.entries(S.subjects).map(([k, s]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
-  const classOptions = (all) => (all ? '<option value="all">כל בית הספר</option>' : '') + S.classes.map(c => `<option ${c === (S.user.classId || 'ח2') ? 'selected' : ''}>${c}</option>`).join('');
+  const classOptions = (all) => (all ? '<option value="all">כל בית הספר</option>' : '') + S.classes.map(c => `<option ${c === (S.user.classId || 'ד2') ? 'selected' : ''}>${c}</option>`).join('');
   const sheetForm = (title, form, body, submit) => `<h3>${title}</h3><form data-form="${form}">${body}<button class="btn block" style="margin-top:16px">${submit}</button></form>`;
   const mySubject = () => (Object.entries(S.subjects).find(([, s]) => s.teacher === S.user.name) || ['math'])[0];
 
@@ -899,6 +987,12 @@
       <label class="f">פירוט</label><textarea class="input" name="desc" required></textarea>
       <div class="grid2"><div><label class="f">חתימה עד</label><input class="input" type="date" name="due" value="${addDaysISO(7)}" required></div>
       <div><label class="f">עלות (₪)</label><input class="input" type="number" min="0" name="cost" value="0"></div></div>`, 'שליחה להורים')),
+    newDiary: () => openSheet(sheetForm('עדכון ביומן ' + (isGan(S.user.classId) ? 'הגן' : 'הכיתה'), 'newDiary', `
+      <div class="grid2"><div><label class="f" for="dyCls">כיתה / גן</label><select class="input" id="dyCls" name="classId">${classOptions()}</select></div>
+      <div><label class="f" for="dyIco">סמל</label><select class="input" id="dyIco" name="ico">${['📔', '🎨', '🔬', '📚', '🎵', '🌳', '🍂', '🎉', '⚽', '🧮'].map(i => `<option>${i}</option>`).join('')}</select></div></div>
+      <label class="f" for="dyTitle">כותרת</label><input class="input" id="dyTitle" name="title" required placeholder="למשל: למדנו על הסתיו">
+      <label class="f" for="dyText">מה עשינו היום?</label><textarea class="input" id="dyText" name="text" required></textarea>`, 'פרסום להורים')),
+    delPickupPerson: i => { const l = S.pickupPeople[child().id]; l.splice(+i, 1); save(); render(); },
     theme: id => { P.theme = id; savePrefs(); render(); },
     askNotify: () => {
       if (!('Notification' in window)) return toast('הדפדפן לא תומך בהתראות');
@@ -916,6 +1010,14 @@
   };
 
   const FORMS = {
+    newDiary: fd => { S.diary.unshift({ id: uid('d'), classId: fd.get('classId'), ico: fd.get('ico'), title: fd.get('title'), text: fd.get('text'), date: todayISO(), author: S.user.name }); save(); closeSheet(); go('diary'); toast('העדכון פורסם להורים'); },
+    pickup: fd => {
+      const c = child(); const t = todayISO();
+      S.pickups = S.pickups || {}; S.pickups[t] = S.pickups[t] || {};
+      S.pickups[t][c.id] = { child: c.name, classId: c.classId, by: fd.get('by'), afterschool: !!fd.get('afterschool'), time: fd.get('time'), note: fd.get('note') };
+      save(); render(); toast(`העדכון נשלח ל${isGan(c.classId) ? 'גננת' : 'מחנכת'} ✓`);
+    },
+    addPickupPerson: fd => { const n = fd.get('name').trim(); if (!n) return; S.pickupPeople[child().id] = S.pickupPeople[child().id] || []; S.pickupPeople[child().id].push(n); save(); render(); toast('נוסף לרשימת המורשים'); },
     sendMsg: (fd, el) => {
       const t = S.threads.find(x => x.id === el.dataset.id);
       const text = fd.get('text').trim(); if (!text) return;

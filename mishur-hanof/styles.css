@@ -95,6 +95,8 @@ h2 a, .link { font-size: .85rem; font-weight: 500; text-decoration: none; color:
 }
 .hero h1 { color: #fff; }
 .hero p { margin: 2px 0 0; opacity: .9; }
+.hero .chip:not(.on) { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.4); }
+.hero .chip.on { background: #fff; color: #1d4a2a; border-color: #fff; }
 .now-box { margin-top: 14px; background: rgba(255,255,255,.14); border-radius: 14px; padding: 12px; position: relative; z-index: 1; }
 .now-box small { opacity: .85; }
 .now-box b { display: block; font-size: 1.1rem; }
