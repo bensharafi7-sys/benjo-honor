@@ -76,6 +76,14 @@
     const f = $('#sheetContent').querySelector('input,textarea,select');
     if (f && window.matchMedia('(pointer:fine)').matches) f.focus();
   }
+  function askConfirm(text, act, id) {
+    openSheet(`<h3>${esc(text)}</h3><div class="btn-row" style="margin-top:14px"><button class="btn danger" data-act="${act}" data-id="${esc(id || '')}">כן, להמשיך</button><button class="btn ghost" data-close>ביטול</button></div>`);
+  }
+  function copyText(text, okMsg) {
+    try {
+      navigator.clipboard.writeText(text).then(() => toast(okMsg), () => toast('לא ניתן להעתיק בתצוגה זו'));
+    } catch (e) { toast('לא ניתן להעתיק בתצוגה זו'); }
+  }
   function closeSheet() { $('#sheet').classList.add('hidden'); $('#sheetContent').innerHTML = ''; }
 
   const ROLES = {
@@ -246,11 +254,11 @@
         <button class="card stat" data-go="grades"><b>${avg ? avg.toFixed(1) : '—'}</b><small>ממוצע כללי</small></button>
         <button class="card stat" data-go="attendance"><b>${att}</b><small>חיסורים במחצית</small></button>
       </div>
-      <h2>משימות קרובות <a href="#/tasks">הכל</a></h2>
+      <h2>משימות קרובות <button class="link" data-go="tasks">הכל</button></h2>
       ${sectionList(openHw().slice(0, 3), hwRow, 'אין משימות פתוחות')}
-      <h2>מבחנים ואירועים <a href="#/calendar">ללוח</a></h2>
+      <h2>מבחנים ואירועים <button class="link" data-go="calendar">ללוח</button></h2>
       ${sectionList(upcomingEvents(14).slice(0, 3), eventRow, 'אין אירועים בשבועיים הקרובים')}
-      <h2>הודעות אחרונות <a href="#/news">הכל</a></h2>
+      <h2>הודעות אחרונות <button class="link" data-go="news">הכל</button></h2>
       ${sectionList(visibleAnn().slice(0, 2), annRow, 'אין הודעות')}`;
   };
 
@@ -277,7 +285,7 @@
         <button class="tile" data-go="inbox"><span class="ico">📥</span>דיווחים${reports.length ? `<span class="badge count">${reports.length}</span>` : ''}</button>
       </div>
       ${reports.length ? `<h2>דיווחי היעדרות מהורים</h2><div class="card"><ul class="list">${reports.slice(0, 3).map(r => `<li class="row"><span class="ico-circle">🏠</span><div class="grow"><div class="title">${esc(r.child)} · ${fmtShort(r.from)}${r.to !== r.from ? '–' + fmtShort(r.to) : ''}</div><div class="meta">${esc(r.reason)}${r.note ? ' – ' + esc(r.note) : ''}</div></div><button class="btn sm ghost" data-act="seeReport" data-id="${r.id}">ראיתי</button></li>`).join('')}</ul></div>` : ''}
-      <h2>המשימות שנתתי <a href="#/tasks">הכל</a></h2>
+      <h2>המשימות שנתתי <button class="link" data-go="tasks">הכל</button></h2>
       ${sectionList(S.homework.filter(h => !mySubjects.length || mySubjects.includes(h.subject)).filter(h => daysFrom(h.due) >= 0).sort((a, b) => a.due.localeCompare(b.due)).slice(0, 4), hwRow, 'אין משימות פעילות')}
       <h2>אירועים קרובים</h2>
       ${sectionList(S.events.filter(e => daysFrom(e.date) >= 0 && daysFrom(e.date) <= 14).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4), eventRow, 'אין אירועים קרובים')}`;
@@ -311,7 +319,7 @@
         <button class="tile" data-go="lost"><span class="ico">🔎</span>אבדות</button>
         <button class="tile" data-go="buses"><span class="ico">🚌</span>הסעות</button>
       </div>
-      <h2>הודעות שפורסמו <a href="#/news">הכל</a></h2>
+      <h2>הודעות שפורסמו <button class="link" data-go="news">הכל</button></h2>
       ${sectionList(visibleAnn().slice(0, 3), annRow, 'אין הודעות')}`;
   };
 
@@ -467,7 +475,7 @@
     return `<h1>הודעות ועדכונים</h1>
       <div class="chips" style="margin-top:10px"><button class="chip ${cat === 'all' ? 'on' : ''}" data-act="newsCat" data-id="all">הכל</button>${cats.map(c => `<button class="chip ${cat === c ? 'on' : ''}" data-act="newsCat" data-id="${esc(c)}">${esc(c)}</button>`).join('')}</div>
       ${sectionList(list, annRow, 'אין הודעות')}
-      <h2>הודעות אישיות <a href="#/messages">לתיבה</a></h2>
+      <h2>הודעות אישיות <button class="link" data-go="messages">לתיבה</button></h2>
       ${PAGES.threadList()}
       ${isStaff() ? '<button class="fab" data-act="newAnn" aria-label="הודעה חדשה">+</button>' : ''}`;
   };
@@ -603,7 +611,7 @@
     return `<h1>ספר טלפונים</h1>
       <input class="input" style="margin:10px 0" placeholder="חיפוש לפי שם או תפקיד" value="${esc(q)}" data-input="contactsQ">
       ${groups.map(g => `<h2>${esc(g)}</h2><div class="card"><ul class="list">${list.filter(c => c.group === g).map(c => `<li class="row"><span class="ico-circle">${esc(c.name[0])}</span>
-        <div class="grow"><div class="title">${esc(c.name)}</div><div class="meta">${esc(c.role)}</div></div>
+        <div class="grow"><div class="title">${esc(c.name)}</div><div class="meta">${esc(c.role)} · <bdi dir="ltr" style="user-select:all">${esc(c.phone)}</bdi></div></div>
         <a class="btn sm ghost" href="tel:${esc(c.phone)}" aria-label="חיוג">📞</a><a class="btn sm ghost" href="mailto:${esc(c.email)}" aria-label="מייל">✉️</a></li>`).join('')}</ul></div>`).join('') || '<div class="card empty">לא נמצאו תוצאות</div>'}`;
   };
 
@@ -711,12 +719,19 @@
   }
   const TAB_BADGE = { news: () => unreadAnn() + unreadMsgs(), tasks: () => isStaff() ? 0 : openHw().filter(h => daysFrom(h.due) <= 1).length, inbox: () => S.counsel.filter(c => !c.handled).length + S.absenceReports.filter(r => !r.seen).length };
 
-  function go(r) { location.hash = '#/' + r; }
+  // Route lives in memory and is mirrored to the URL hash when allowed, so it also works inside sandboxed frames.
+  const routeFromHash = () => { try { return location.hash.replace(/^#\/?/, ''); } catch (e) { return ''; } };
+  let route = routeFromHash() || 'home';
+  function go(r) {
+    route = r || 'home';
+    try { history.pushState(null, '', '#/' + route); } catch (e) { /* ignore */ }
+    render();
+  }
 
   function render() {
     if (!S.user) { $('#tabbar').classList.add('hidden'); $('#topbar').classList.add('hidden'); $('#view').innerHTML = PAGES.onboard(); return; }
     $('#tabbar').classList.remove('hidden'); $('#topbar').classList.remove('hidden');
-    const [name, param] = (location.hash.replace(/^#\/?/, '') || 'home').split('/');
+    const [name, param] = route.split('/');
     const page = PAGES[name] && !['onboard', 'teacherHome', 'adminHome', 'threadList'].includes(name) ? name : 'home';
     const tabs = tabsFor();
     $('#view').innerHTML = PAGES[page](param);
@@ -729,8 +744,8 @@
     $('#roleLabel').textContent = ROLES[role()].label + (isParent() ? ' · ' + child().name : S.user.classId ? ' · ' + S.user.classId : '');
     $('#bellDot').classList.toggle('hidden', !alerts().length);
     if (page === 'chat') { const c = $('#chatBox'); if (c) window.scrollTo(0, document.body.scrollHeight); }
-    else if (render._last !== location.hash) window.scrollTo(0, 0);
-    render._last = location.hash;
+    else if (render._last !== route) window.scrollTo(0, 0);
+    render._last = route;
   }
 
   // ---------- Forms in sheets ----------
@@ -748,7 +763,7 @@
       S.user = { role: r, name, classId: cls };
       save(); go('home'); render(); toast(`ברוכים הבאים, ${name.split(' ')[0]}!`);
     },
-    switchRole: () => { S.user = null; save(); location.hash = ''; render(); },
+    switchRole: () => { S.user = null; save(); go('home'); },
     pickChild: id => { P.childId = id; savePrefs(); render(); },
     pickDay: id => { PAGES.schedule.day = +id; render(); },
     toggleHw: id => {
@@ -790,6 +805,7 @@
       const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mishur HaNof//HE'];
       evs.forEach(e => { const d = e.date.replace(/-/g, ''); lines.push('BEGIN:VEVENT', `UID:${e.id}@mishur-hanof`, `DTSTART;VALUE=DATE:${d}`, `SUMMARY:${e.title}`, 'END:VEVENT'); });
       lines.push('END:VCALENDAR');
+      if (window.self !== window.top) return copyText(lines.join('\r\n'), 'נתוני היומן הועתקו (הורדת קבצים חסומה בתצוגה זו)');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/calendar' }));
       a.download = 'mishur-hanof.ics'; a.click();
@@ -798,11 +814,12 @@
     shareAnn: id => {
       const a = S.announcements.find(x => x.id === id);
       const text = `${a.title}\n${a.body}\n— ${S.school.name}`;
-      if (navigator.share) navigator.share({ title: a.title, text }).catch(() => {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast('ההודעה הועתקה'));
+      const copy = () => copyText(text, 'ההודעה הועתקה – אפשר להדביק בוואטסאפ');
+      if (navigator.share) navigator.share({ title: a.title, text }).catch(copy); else copy();
     },
     pinAnn: id => { const a = S.announcements.find(x => x.id === id); a.pinned = !a.pinned; save(); render(); },
-    delAnn: id => { if (!confirm('למחוק את ההודעה?')) return; S.announcements = S.announcements.filter(a => a.id !== id); save(); go('news'); toast('ההודעה נמחקה'); },
+    delAnn: id => askConfirm('למחוק את ההודעה?', 'delAnnYes', id),
+    delAnnYes: id => { closeSheet(); S.announcements = S.announcements.filter(a => a.id !== id); save(); go('news'); toast('ההודעה נמחקה'); },
     newThread: () => openSheet(sheetForm('שיחה חדשה', 'newThread', `
       <label class="f">אל</label><select class="input" name="to">${S.contacts.filter(c => c.group !== 'קהילה').map(c => `<option value="${esc(c.name)}|${esc(c.role)}">${esc(c.name)} – ${esc(c.role)}</option>`).join('')}</select>
       <label class="f">הודעה</label><textarea class="input" name="text" required></textarea>`, 'שליחה')),
@@ -894,7 +911,8 @@
       if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; return; }
       openSheet(`<h3>התקנה במסך הבית</h3><p><b>אייפון (Safari):</b> כפתור השיתוף ⬆️ ← "הוסף למסך הבית".</p><p><b>אנדרואיד (Chrome):</b> תפריט ⋮ ← "התקנת אפליקציה".</p><button class="btn block" data-close>הבנתי</button>`);
     },
-    reset: () => { if (!confirm('לאפס את כל נתוני ההדגמה?')) return; localStorage.removeItem(KEY); S = load(); location.hash = ''; render(); toast('הנתונים אופסו'); }
+    reset: () => askConfirm('לאפס את כל נתוני ההדגמה?', 'resetYes'),
+    resetYes: () => { closeSheet(); try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } S = JSON.parse(JSON.stringify(MH_SEED)); go('home'); toast('הנתונים אופסו'); }
   };
 
   const FORMS = {
@@ -906,7 +924,7 @@
       // Demo: simulated auto-acknowledgement
       setTimeout(() => {
         t.msgs.push({ from: 'them', text: 'תודה, קיבלתי. אחזור אליך בהקדם 🙏', time: todayISO() + 'T' + new Date().toTimeString().slice(0, 5) });
-        if (!location.hash.includes(t.id)) t.unread = (t.unread || 0) + 1;
+        if (!route.includes(t.id)) t.unread = (t.unread || 0) + 1;
         save(); render();
       }, 1800);
     },
@@ -1003,14 +1021,14 @@
   $('#backBtn').addEventListener('click', () => history.length > 1 ? history.back() : go('home'));
   $('#bellBtn').addEventListener('click', () => go('alerts'));
   $('#searchBtn').addEventListener('click', () => go('search'));
-  window.addEventListener('hashchange', render);
+  window.addEventListener('popstate', () => { route = routeFromHash() || 'home'; render(); });
 
   let deferredInstall = null;
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; });
 
   // Keep the "now" lesson card fresh on the home and schedule screens
   setInterval(() => {
-    const page = (location.hash.replace(/^#\/?/, '') || 'home').split('/')[0];
+    const page = route.split('/')[0];
     if ((page === 'home' || page === 'schedule') && $('#sheet').classList.contains('hidden') && document.activeElement.tagName !== 'INPUT') render();
   }, 60000);
 
